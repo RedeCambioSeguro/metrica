@@ -474,6 +474,99 @@ a {
   color: var(--ink);
 }
 
+/* ---------------------------------------------------------------------------
+   Conexões
+--------------------------------------------------------------------------- */
+
+.lista-conexoes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.conexao {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 15px 18px;
+  border-top: 1px solid var(--border);
+}
+
+.conexao:first-child {
+  border-top: none;
+}
+
+.conexao-cor {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.conexao-info {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.conexao-nome {
+  font-weight: 600;
+  color: var(--ink);
+  font-size: 15px;
+  /* Nome de campanha longo não pode empurrar os botões para fora da tela. */
+  overflow-wrap: anywhere;
+}
+
+.conexao-meta {
+  font-size: 13.5px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.conexao-erro {
+  font-size: 13px;
+  color: var(--negative);
+  overflow-wrap: anywhere;
+}
+
+.conexao-acoes {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.btn.pequeno {
+  padding: 7px 13px;
+  font-size: 13.5px;
+}
+
+.titulo-provider {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+
+@media (max-width: 620px) {
+  .conexao {
+    flex-wrap: wrap;
+  }
+
+  .conexao-acoes {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     animation: none !important;
