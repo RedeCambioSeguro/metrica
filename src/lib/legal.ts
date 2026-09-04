@@ -14,12 +14,8 @@ export const EMPRESA = {
 
   cnpj: "36.749.502/0001-67",
 
-  /**
-   * PENDENTE: falta bairro, cidade, UF e CEP.
-   * O revisor do Google confere o endereco contra o registro do dominio;
-   * endereco truncado e motivo de pedido de esclarecimento, que recomeca a fila.
-   */
-  endereco: "Rua Professor João Cândido, 324",
+  endereco:
+    "Rua Professor João Cândido, 324, Centro, Londrina/PR, CEP 86010-000",
 
   emailContato: "contato@redecambioseguro.com.br",
 
