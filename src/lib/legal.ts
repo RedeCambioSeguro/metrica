@@ -9,14 +9,17 @@
 export const EMPRESA = {
   nomeFantasia: "Rede Câmbio Seguro",
 
-  /** PREENCHER: razao social completa, como no cartao CNPJ. */
-  razaoSocial: "Rede Câmbio Seguro",
+  razaoSocial:
+    "RCS Marketplace de Câmbio e Serviços Nacionais e Internacionais Ltda.",
 
-  /** PREENCHER: apenas numeros ou no formato 00.000.000/0000-00. */
-  cnpj: "",
+  cnpj: "36.749.502/0001-67",
 
-  /** PREENCHER: logradouro, numero, bairro, cidade, UF e CEP. */
-  endereco: "",
+  /**
+   * PENDENTE: falta bairro, cidade, UF e CEP.
+   * O revisor do Google confere o endereco contra o registro do dominio;
+   * endereco truncado e motivo de pedido de esclarecimento, que recomeca a fila.
+   */
+  endereco: "Rua Professor João Cândido, 324",
 
   emailContato: "contato@redecambioseguro.com.br",
 
