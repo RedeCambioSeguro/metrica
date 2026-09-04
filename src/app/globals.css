@@ -1,0 +1,209 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Identidade visual da Metrica.
+   Tokens definidos no :root claro e redefinidos no escuro - nunca declare uma
+   cor apenas dentro do bloco escuro, ou ela deixa de existir no tema claro.
+--------------------------------------------------------------------------- */
+
+:root {
+  color-scheme: light;
+
+  --bg: #f8f9fb;
+  --surface: #ffffff;
+  --surface-2: #f1f3f7;
+  --border: #e3e7ee;
+  --border-strong: #c9d0dc;
+
+  --ink: #10141c;
+  --body: #3c4453;
+  --muted: #6b7484;
+
+  --brand: #0f5a6e;
+  --brand-hover: #0c4959;
+  --brand-soft: #e6f1f4;
+  --brand-contrast: #ffffff;
+
+  --positive: #0e7145;
+  --positive-soft: #e6f3ec;
+  --negative: #b3261e;
+  --negative-soft: #fbeceb;
+  --attention: #8a4b06;
+  --attention-soft: #fbf0e3;
+
+  --radius: 6px;
+  --shadow-sm: 0 1px 2px rgba(16, 20, 28, 0.06);
+  --shadow-md: 0 4px 16px rgba(16, 20, 28, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --bg: #0d1016;
+    --surface: #151a22;
+    --surface-2: #1c222c;
+    --border: #262d38;
+    --border-strong: #38414f;
+
+    --ink: #f2f4f8;
+    --body: #ccd2dc;
+    --muted: #8d97a6;
+
+    --brand: #4fb3ca;
+    --brand-hover: #6cc4d8;
+    --brand-soft: #10303a;
+    --brand-contrast: #08151a;
+
+    --positive: #5ed195;
+    --positive-soft: #10281d;
+    --negative: #f0918a;
+    --negative-soft: #2b1917;
+    --attention: #eeae70;
+    --attention-soft: #2c2216;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.45);
+  }
+}
+
+body {
+  background: var(--bg);
+  color: var(--body);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  color: var(--ink);
+  text-wrap: balance;
+  letter-spacing: -0.018em;
+}
+
+/* Numeros em tabela e KPI precisam alinhar coluna a coluna. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+a {
+  color: var(--brand);
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* ---------------------------------------------------------------------------
+   Documentos legais: coluna de leitura estreita e hierarquia clara.
+--------------------------------------------------------------------------- */
+
+.doc {
+  max-width: 70ch;
+  margin: 0 auto;
+  padding: 72px 24px 120px;
+}
+
+.doc h1 {
+  font-size: clamp(30px, 5vw, 40px);
+  font-weight: 700;
+  line-height: 1.12;
+  margin: 0 0 12px;
+}
+
+.doc .doc-meta {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 0 0 44px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.doc h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 44px 0 12px;
+}
+
+.doc h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 26px 0 8px;
+}
+
+.doc p,
+.doc li {
+  margin: 0 0 14px;
+}
+
+.doc ul,
+.doc ol {
+  padding-left: 22px;
+  margin: 0 0 18px;
+}
+
+.doc li::marker {
+  color: var(--muted);
+}
+
+.doc strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.doc .callout {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--brand);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin: 26px 0;
+}
+
+.doc .callout p:last-child {
+  margin-bottom: 0;
+}
+
+.doc table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+  margin: 0 0 20px;
+}
+
+.doc th,
+.doc td {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.doc th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.doc-nav {
+  max-width: 70ch;
+  margin: 0 auto;
+  padding: 24px 24px 0;
+  font-size: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

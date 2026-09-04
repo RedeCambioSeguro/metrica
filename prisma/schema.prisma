@@ -1,0 +1,340 @@
+// Metrica - plataforma de relatorios de marketing
+//
+// Conceito central da modelagem:
+//   Organization  -> o tenant (sua agencia). Multi-tenant desde o inicio.
+//   Project       -> o cliente. Tudo o que o usuario ve e organizado por projeto.
+//   Credential    -> um login OAuth (familia "google", "meta"...). UM login do Google
+//                    concede acesso a GA4 + Ads + Search Console + Meu Negocio ao mesmo
+//                    tempo, entao a credencial e compartilhada entre varias conexoes.
+//   Connection    -> uma conta especifica de uma plataforma vinculada a um projeto
+//                    (ex.: propriedade GA4 "123456", conta de anuncios "act_789").
+//   MetricDaily   -> o cache de metricas. Tabela generica: qualquer plataforma nova
+//                    grava aqui sem precisar de migration.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // Conexao com pool (pgbouncer) - usada pela aplicacao em producao.
+  url       = env("DATABASE_URL")
+  // Conexao direta - o Prisma exige para criar migrations, porque o pgbouncer
+  // nao suporta os comandos de DDL em sessao que a migration usa.
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Autenticacao (modelos exigidos pelo adapter do Auth.js) e tenancy
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts    Account[]
+  sessions    Session[]
+  memberships Membership[]
+}
+
+/// Login do proprio usuario na plataforma (ex.: "entrar com Google").
+/// Nao confundir com Credential, que guarda o acesso as APIs de anuncios.
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships Membership[]
+  projects    Project[]
+  credentials Credential[]
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+model Membership {
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String
+  role           Role     @default(MEMBER)
+  createdAt      DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+}
+
+// ---------------------------------------------------------------------------
+// Projetos (clientes)
+// ---------------------------------------------------------------------------
+
+model Project {
+  id             String    @id @default(cuid())
+  organizationId String
+  name           String
+  slug           String
+  logoUrl        String?
+  brandColor     String    @default("#2563EB")
+  timezone       String    @default("America/Sao_Paulo")
+  currency       String    @default("BRL")
+  archivedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  connections  Connection[]
+  reports      Report[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+}
+
+// ---------------------------------------------------------------------------
+// Credenciais OAuth das plataformas de anuncio
+// ---------------------------------------------------------------------------
+
+/// Um consentimento OAuth concedido por uma pessoa a uma FAMILIA de APIs.
+/// accessToken/refreshToken sao gravados criptografados (AES-256-GCM) -
+/// ver src/lib/crypto.ts. Nunca gravar em texto puro.
+model Credential {
+  id             String    @id @default(cuid())
+  organizationId String
+  /// Familia OAuth: "google" | "meta" | "linkedin" | "tiktok"
+  family         String
+  /// Identificador do usuario no provedor (sub do Google, user id do Meta)
+  providerUserId String
+  displayName    String?
+  email          String?
+  accessToken    String    @db.Text
+  refreshToken   String?   @db.Text
+  expiresAt      DateTime?
+  scopes         String[]  @default([])
+  revokedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  connections  Connection[]
+
+  @@unique([organizationId, family, providerUserId])
+  @@index([organizationId])
+}
+
+enum ConnectionStatus {
+  ACTIVE
+  NEEDS_REAUTH
+  ERROR
+  DISABLED
+}
+
+/// Uma conta de plataforma vinculada a um projeto.
+model Connection {
+  id           String           @id @default(cuid())
+  projectId    String
+  credentialId String
+  /// Id do provider no registry: "google_analytics" | "google_ads" | "meta_ads" | ...
+  provider     String
+  /// Id da conta na plataforma (property id, customer id, act_id, siteUrl...)
+  externalId   String
+  externalName String
+  /// Ajustes por conexao: metas, filtros, id do gerente, moeda da conta...
+  config       Json             @default("{}")
+  status       ConnectionStatus @default(ACTIVE)
+  lastSyncedAt DateTime?
+  lastError    String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  project    Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  credential Credential    @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+  metrics    MetricDaily[]
+  syncJobs   SyncJob[]
+
+  @@unique([projectId, provider, externalId])
+  @@index([provider, status])
+  @@index([projectId])
+}
+
+// ---------------------------------------------------------------------------
+// Cache de metricas
+// ---------------------------------------------------------------------------
+
+/// Tabela de fatos generica, em granularidade diaria.
+///
+/// Uma linha = (conexao, dia, metrica, combinacao de dimensoes).
+/// Metricas sem recorte (ex.: sessoes do dia) usam dimensionKey = "".
+/// Metricas com recorte (ex.: cliques por campanha) serializam as dimensoes
+/// em dimensionKey para que a unique key funcione - ver src/server/metrics/key.ts.
+///
+/// A unique composta e o que torna o sync IDEMPOTENTE: re-sincronizar um
+/// periodo sobrescreve as linhas em vez de duplicar.
+model MetricDaily {
+  id           BigInt   @id @default(autoincrement())
+  connectionId String
+  date         DateTime @db.Date
+  metric       String
+  value        Decimal  @db.Decimal(20, 6)
+  dimensions   Json     @default("{}")
+  dimensionKey String   @default("")
+  syncedAt     DateTime @default(now())
+
+  connection Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, date, metric, dimensionKey])
+  @@index([connectionId, metric, date])
+  @@index([connectionId, date])
+}
+
+enum SyncJobStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+model SyncJob {
+  id           String        @id @default(cuid())
+  connectionId String
+  rangeStart   DateTime      @db.Date
+  rangeEnd     DateTime      @db.Date
+  status       SyncJobStatus @default(PENDING)
+  attempts     Int           @default(0)
+  rowsWritten  Int           @default(0)
+  error        String?       @db.Text
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  createdAt    DateTime      @default(now())
+
+  connection Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([connectionId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Relatorios
+// ---------------------------------------------------------------------------
+
+enum ReportStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model Report {
+  id        String       @id @default(cuid())
+  projectId String
+  name      String
+  status    ReportStatus @default(DRAFT)
+
+  /// Slug do link publico compartilhavel (/r/<publicId>)
+  publicId     String  @unique @default(cuid())
+  isPublic     Boolean @default(false)
+  passwordHash String?
+
+  periodStart DateTime @db.Date
+  periodEnd   DateTime @db.Date
+  /// "previous_period" | "previous_year" | "none"
+  compareMode String   @default("previous_period")
+
+  /// Marca este relatorio como modelo reaproveitavel para agendamentos.
+  isTemplate Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project   Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  blocks    ReportBlock[]
+  schedules ReportSchedule[]
+
+  @@index([projectId, updatedAt])
+}
+
+/// Um bloco do relatorio. O `type` diz como renderizar e o `config` carrega
+/// quais metricas/dimensoes usar - assim um provider novo adiciona blocos
+/// sem exigir mudanca de schema.
+model ReportBlock {
+  id           String  @id @default(cuid())
+  reportId     String
+  position     Int
+  /// "section" | "text" | "kpi_row" | "time_series" | "table" | "donut" | "comparison"
+  type         String
+  provider     String?
+  connectionId String?
+  title        String?
+  config       Json    @default("{}")
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId, position])
+}
+
+model ReportSchedule {
+  id         String    @id @default(cuid())
+  reportId   String
+  /// "monthly" | "weekly"
+  frequency  String    @default("monthly")
+  dayOfMonth Int?      @default(1)
+  dayOfWeek  Int?
+  hour       Int       @default(8)
+  recipients String[]  @default([])
+  active     Boolean   @default(true)
+  lastRunAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([active, frequency])
+}
